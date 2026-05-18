@@ -167,8 +167,8 @@ For most production use cases — domain adaptation, style transfer, instruction
   },
 ]
 
-export default async function DraftDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
+export default function DraftDetailPage({ params }: { params: { id: string } }) {
+  const { id } = params
   const draft = DRAFTS.find((d) => d.id === id)
   if (!draft) notFound()
 

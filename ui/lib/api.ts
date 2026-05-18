@@ -1,4 +1,4 @@
-const BASE = 'http://localhost:3001/api'
+const BASE = process.env.NEXT_PUBLIC_API_BASE ?? '/api'
 
 export type ApiError = {
   error: true

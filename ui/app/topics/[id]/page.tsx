@@ -86,8 +86,8 @@ const TOPICS: Topic[] = [
   },
 ]
 
-export default async function TopicDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
+export default function TopicDetailPage({ params }: { params: { id: string } }) {
+  const { id } = params
   const topic = TOPICS.find((t) => t.id === id)
   if (!topic) notFound()
 

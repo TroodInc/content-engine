@@ -1,4 +1,37 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { getTopics, getDrafts, isApiError, type Topic, type Draft } from '@/lib/api'
+
+type PipelineState = {
+  topics: Topic[]
+  drafts: Draft[]
+  lastRun: string | null
+  loading: boolean
+}
+
 export default function DashboardPage() {
+  const [state, setState] = useState<PipelineState>({ topics: [], drafts: [], lastRun: null, loading: true })
+
+  useEffect(() => {
+    Promise.all([getTopics(), getDrafts()]).then(([topicsResult, draftsResult]) => {
+      setState({
+        topics: isApiError(topicsResult) ? [] : topicsResult,
+        drafts: isApiError(draftsResult) ? [] : draftsResult,
+        lastRun: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+        loading: false,
+      })
+    })
+  }, [])
+
+  const { topics, drafts, lastRun, loading } = state
+
+  const totalArticles = topics.reduce((n, t) => n + t.article_count, 0)
+  const readyDrafts = drafts.filter((d) => d.status === 'ready').length
+  const publishedDrafts = drafts.filter((d) => d.status === 'published').length
+
+  const lastAnalyzed = loading ? '—' : topics.length > 0 ? 'Just now' : 'Never'
+
   return (
     <div className="max-w-4xl">
       <header className="mb-8">
@@ -7,26 +40,10 @@ export default function DashboardPage() {
       </header>
 
       <div className="grid grid-cols-2 gap-4 mb-10 lg:grid-cols-4">
-        <StatCard
-          label="Last Analyzed"
-          value="2 hours ago"
-          icon={<ClockIcon />}
-        />
-        <StatCard
-          label="Posts Processed"
-          value="142"
-          icon={<StackIcon />}
-        />
-        <StatCard
-          label="Topics Discovered"
-          value="18"
-          icon={<BulbIcon />}
-        />
-        <StatCard
-          label="Drafts Ready"
-          value="5"
-          icon={<FileIcon />}
-        />
+        <StatCard label="Last Analyzed" value={lastAnalyzed} icon={<ClockIcon />} loading={loading} />
+        <StatCard label="Posts Processed" value={String(totalArticles)} icon={<StackIcon />} loading={loading} />
+        <StatCard label="Topics Discovered" value={String(topics.length)} icon={<BulbIcon />} loading={loading} />
+        <StatCard label="Drafts Ready" value={String(readyDrafts)} icon={<FileIcon />} loading={loading} />
       </div>
 
       <section>
@@ -36,27 +53,29 @@ export default function DashboardPage() {
         <div className="rounded-lg bg-[#1c1c1c] border border-[#2a2a2a] divide-y divide-[#2a2a2a]">
           <PipelineRow
             step="Fetch &amp; Analyze"
-            state="completed"
-            detail="142 posts from 6 sources"
+            state={totalArticles > 0 ? 'completed' : 'pending'}
+            detail={totalArticles > 0 ? `${totalArticles} articles from ${topics.length} topics` : 'Not yet run'}
           />
           <PipelineRow
             step="Topic Clustering"
-            state="completed"
-            detail="18 topics identified"
+            state={topics.length > 0 ? 'completed' : 'pending'}
+            detail={topics.length > 0 ? `${topics.length} topics identified` : 'Waiting for analysis'}
           />
           <PipelineRow
             step="Draft Generation"
-            state="completed"
-            detail="5 drafts written"
+            state={drafts.length > 0 ? 'completed' : 'pending'}
+            detail={drafts.length > 0 ? `${drafts.length} drafts written` : 'Waiting for topics'}
           />
           <PipelineRow
             step="Review Queue"
-            state="pending"
-            detail="Awaiting approval"
+            state={readyDrafts > 0 ? 'completed' : 'pending'}
+            detail={readyDrafts > 0 ? `${readyDrafts} ready · ${publishedDrafts} published` : 'Awaiting approval'}
           />
         </div>
         <p className="mt-3 text-xs text-zinc-600">
-          Last run: <span className="text-zinc-500">Today at 10:42 AM</span>
+          {lastRun
+            ? <>Last checked: <span className="text-zinc-500">Today at {lastRun}</span></>
+            : <span className="text-zinc-700">Not yet loaded</span>}
         </p>
       </section>
     </div>
@@ -67,10 +86,12 @@ function StatCard({
   label,
   value,
   icon,
+  loading,
 }: {
   label: string
   value: string
   icon: React.ReactNode
+  loading: boolean
 }) {
   return (
     <div className="rounded-lg bg-[#1c1c1c] border border-[#2a2a2a] px-4 py-5 flex flex-col gap-4">
@@ -79,7 +100,11 @@ function StatCard({
       </div>
       <div>
         <p className="text-xs text-zinc-500 font-medium">{label}</p>
-        <p className="mt-1 text-xl font-semibold text-white leading-none">{value}</p>
+        {loading ? (
+          <div className="mt-1 h-6 w-16 rounded bg-zinc-700 animate-pulse" />
+        ) : (
+          <p className="mt-1 text-xl font-semibold text-white leading-none">{value}</p>
+        )}
       </div>
     </div>
   )
@@ -96,8 +121,8 @@ function PipelineRow({
 }) {
   const indicators = {
     completed: { dot: 'bg-emerald-500', label: 'Completed', text: 'text-emerald-400' },
-    running: { dot: 'bg-blue-500 animate-pulse', label: 'Running', text: 'text-blue-400' },
-    pending: { dot: 'bg-zinc-600', label: 'Pending', text: 'text-zinc-500' },
+    running:   { dot: 'bg-blue-500 animate-pulse', label: 'Running', text: 'text-blue-400' },
+    pending:   { dot: 'bg-zinc-600', label: 'Pending', text: 'text-zinc-500' },
   }
   const { dot, label, text } = indicators[state]
 
