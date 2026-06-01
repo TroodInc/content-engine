@@ -353,6 +353,52 @@ You can still invoke the orchestrator directly with `node dist/index.js ...`, bu
 
 ---
 
+## Web UI
+
+The `ui/` folder is a Next.js 14 dashboard for the content pipeline.
+It communicates with the backend API server (`src/server.ts`) over HTTP.
+
+### Running the UI and backend together
+
+**1. Start the API server** (from the repo root):
+
+```bash
+npm run build          # compile TypeScript → dist/
+npm run server         # starts Express on http://localhost:3001
+```
+
+**2. Configure the UI** (first time only):
+
+```bash
+cd ui
+cp .env.example .env.local
+# Edit .env.local if your API runs on a different host/port
+```
+
+**3. Start the UI dev server**:
+
+```bash
+cd ui
+npm install
+npm run dev            # http://localhost:3000
+```
+
+The UI reads `NEXT_PUBLIC_API_BASE` from `.env.local` (default: `http://localhost:3001/api`).
+In production, set that variable to your deployed API URL.
+
+### API endpoints provided by the server
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/analyze` | Fetch Telegram posts and extract topics |
+| `POST` | `/api/schedule` | Build content plan from topics |
+| `POST` | `/api/write` | Generate draft articles (`{ query?: string }`) |
+| `POST` | `/api/publish` | Push ready drafts to Discourse |
+| `GET`  | `/api/topics` | List all discovered topics |
+| `GET`  | `/api/drafts` | List all draft articles with status |
+
+---
+
 ## Setup
 
 ### Requirements
