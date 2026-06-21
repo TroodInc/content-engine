@@ -6,6 +6,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
+    "preinstall": "sh scripts/fetch-deps.sh",
     "build": "tsc",
     "dev": "tsc --watch",
     "action": "node dist/index.js action",
