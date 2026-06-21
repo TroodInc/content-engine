@@ -9,6 +9,8 @@ import {
   ArticleWriterClaw,
   PublicationSchedulerClaw,
   TelegramAnalyzerClaw,
+  IngestClaw,
+  InterestMatcherClaw,
 } from "./claws/index.js";
 import { createRuntime } from "./runtime.js";
 
@@ -32,6 +34,8 @@ async function start() {
   const schedulerClaw = new PublicationSchedulerClaw(runtime);
   const writerClaw = new ArticleWriterClaw(runtime);
   const publisherClaw = new ArticlePublisherClaw(runtime, config.discourse.categoryId);
+  const ingestClaw = new IngestClaw(runtime);
+  const matcherClaw = new InterestMatcherClaw(runtime);
 
   const app = express();
   app.use(cors());
@@ -83,6 +87,130 @@ async function start() {
     try {
       const result = await publisherClaw.publish();
       res.json({ published: result.published, failed: result.failed });
+    } catch (err) {
+      res.status(500).json({ error: true, message: String(err) });
+    }
+  });
+
+  // --- Ingest & match endpoints ---
+
+  app.post("/api/ingest", async (_req, res) => {
+    try {
+      const result = await ingestClaw.ingestAll();
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: true, message: String(err) });
+    }
+  });
+
+  app.post("/api/match", async (_req, res) => {
+    try {
+      const result = await matcherClaw.matchAll();
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: true, message: String(err) });
+    }
+  });
+
+  // --- Feed API ---
+
+  app.get("/api/interests", async (_req, res) => {
+    try {
+      const interests = await runtime.topicMemory.getAllInterests();
+      res.json(interests.map((i) => ({ id: i.id, slug: i.slug, name: i.name, description: i.description })));
+    } catch (err) {
+      res.status(500).json({ error: true, message: String(err) });
+    }
+  });
+
+  app.get("/api/feed", async (req, res) => {
+    try {
+      const slug = typeof req.query.interest === "string" ? req.query.interest : undefined;
+      const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+      const offset = Math.max(0, Number(req.query.offset) || 0);
+      const userId = typeof req.query.user_id === "string" ? req.query.user_id : undefined;
+
+      if (!slug) {
+        res.status(400).json({ error: true, message: "interest param required" });
+        return;
+      }
+
+      const interest = await runtime.topicMemory.getInterestBySlug(slug);
+      if (!interest) {
+        res.status(404).json({ error: true, message: `Interest not found: ${slug}` });
+        return;
+      }
+
+      const articles = await runtime.topicMemory.getFeedForInterest(interest.id, { limit, offset, userId });
+      res.json(articles.map((a) => ({
+        id: a.id,
+        title: a.title,
+        summary: a.summary ?? null,
+        url: a.url,
+        published_at: a.publishedAt ?? null,
+        score: a.score,
+      })));
+    } catch (err) {
+      res.status(500).json({ error: true, message: String(err) });
+    }
+  });
+
+  app.post("/api/feedback", async (req, res) => {
+    try {
+      const { user_id, article_id, interest_id, signal } = req.body as Record<string, unknown>;
+      if (typeof user_id !== "string" || typeof article_id !== "string") {
+        res.status(400).json({ error: true, message: "user_id and article_id required" });
+        return;
+      }
+      if (!["like", "less", "skip"].includes(signal as string)) {
+        res.status(400).json({ error: true, message: "signal must be like, less, or skip" });
+        return;
+      }
+      await runtime.topicMemory.insertFeedback({
+        userId: user_id,
+        articleId: article_id,
+        interestId: typeof interest_id === "string" ? interest_id : undefined,
+        signal: signal as "like" | "less" | "skip",
+      });
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ error: true, message: String(err) });
+    }
+  });
+
+  // --- Sources admin ---
+
+  app.get("/api/sources", async (_req, res) => {
+    try {
+      const sources = await runtime.topicMemory.getAllSources();
+      res.json(sources.map((s) => ({
+        id: s.id,
+        name: s.name,
+        url: s.url,
+        adapter_type: s.adapterType,
+        interest_ids: s.interestIds,
+        last_ingested_at: s.lastIngestedAt ?? null,
+      })));
+    } catch (err) {
+      res.status(500).json({ error: true, message: String(err) });
+    }
+  });
+
+  app.post("/api/sources", async (req, res) => {
+    try {
+      const { name, url, adapter_type, adapter_config, interest_ids } = req.body as Record<string, unknown>;
+      if (typeof name !== "string" || typeof url !== "string" || typeof adapter_type !== "string") {
+        res.status(400).json({ error: true, message: "name, url, adapter_type required" });
+        return;
+      }
+      const source = await runtime.topicMemory.upsertSource({
+        name,
+        url,
+        adapterType: adapter_type,
+        adapterConfig: (adapter_config as Record<string, unknown>) ?? {},
+        interestIds: Array.isArray(interest_ids) ? (interest_ids as string[]) : [],
+      });
+      res.json(source);
     } catch (err) {
       res.status(500).json({ error: true, message: String(err) });
     }

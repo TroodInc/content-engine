@@ -1,12 +1,16 @@
 import { TopicMemoryDB } from "@contentengine/topic-memory-db";
 import type {
   ArticleExtractionJob,
+  ArticleFeedback,
+  ArticleInterest,
   ContentPlanItem,
   DraftArticle,
   PublishedArticle,
   StoredArticle,
   StoredEmbedding,
+  StoredInterest,
   StoredPost,
+  StoredSource,
   StoredTopic,
   TopicArticleLink,
 } from "@contentengine/topic-memory-db";
@@ -168,5 +172,64 @@ export class TopicMemorySkill implements ContentEngineSkill<TopicMemorySkillInpu
 
   async setState(key: string, value: string): Promise<void> {
     await this.db.setState(key, value);
+  }
+
+  // --- Sources ---
+
+  async upsertSource(source: Omit<StoredSource, "id" | "createdAt" | "updatedAt"> & { id?: string }): Promise<StoredSource> {
+    return this.db.upsertSource(source);
+  }
+
+  async getSourceById(id: string): Promise<StoredSource | null> {
+    return this.db.getSourceById(id);
+  }
+
+  async getAllSources(): Promise<StoredSource[]> {
+    return this.db.getAllSources();
+  }
+
+  async touchSourceIngestedAt(id: string): Promise<void> {
+    await this.db.touchSourceIngestedAt(id);
+  }
+
+  async hasArticleByExternalId(sourceId: string, externalId: string): Promise<boolean> {
+    return this.db.hasArticleByExternalId(sourceId, externalId);
+  }
+
+  // --- Interests ---
+
+  async upsertInterest(interest: Omit<StoredInterest, "id" | "createdAt" | "updatedAt"> & { id?: string }): Promise<StoredInterest> {
+    return this.db.upsertInterest(interest);
+  }
+
+  async getAllInterests(): Promise<StoredInterest[]> {
+    return this.db.getAllInterests();
+  }
+
+  async getInterestBySlug(slug: string): Promise<StoredInterest | null> {
+    return this.db.getInterestBySlug(slug);
+  }
+
+  // --- Article–Interest matching ---
+
+  async upsertArticleInterest(link: ArticleInterest): Promise<void> {
+    await this.db.upsertArticleInterest(link);
+  }
+
+  async getArticlesWithoutInterestScores(): Promise<StoredArticle[]> {
+    return this.db.getArticlesWithoutInterestScores();
+  }
+
+  async getFeedForInterest(
+    interestId: string,
+    options: { limit?: number; offset?: number; userId?: string } = {}
+  ): Promise<Array<StoredArticle & { score: number }>> {
+    return this.db.getFeedForInterest(interestId, options);
+  }
+
+  // --- Feedback ---
+
+  async insertFeedback(feedback: Omit<ArticleFeedback, "id" | "createdAt">): Promise<void> {
+    await this.db.insertFeedback(feedback);
   }
 }

@@ -1,7 +1,7 @@
 {
   "name": "@contentengine/content-engine",
   "version": "0.1.0",
-  "description": "AI-powered editorial pipeline: Telegram → Discourse",
+  "description": "AI-powered content ingestion, interest matching, and personalized feed engine",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

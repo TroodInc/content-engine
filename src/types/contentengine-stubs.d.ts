@@ -5,12 +5,16 @@
 
 declare module '@contentengine/topic-memory-db' {
   export type ArticleExtractionJob = any;
+  export type ArticleFeedback = any;
+  export type ArticleInterest = any;
   export type ContentPlanItem = any;
   export type DraftArticle = any;
   export type PublishedArticle = any;
   export type StoredArticle = any;
   export type StoredEmbedding = any;
+  export type StoredInterest = any;
   export type StoredPost = any;
+  export type StoredSource = any;
   export type StoredTopic = any;
   export type TopicArticleLink = any;
   export declare class TopicMemoryDB {
