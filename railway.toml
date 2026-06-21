@@ -1,8 +1,9 @@
 [build]
-builder = "nixpacks"
+builder   = "nixpacks"
+buildCommand = "npm install && npm run build"
 
 [deploy]
-startCommand = "node dist/server.js"
+startCommand = "node dist/scripts/seed-interests.js && node dist/scripts/seed-sources.js && node dist/server.js"
 
 [[crons]]
 name    = "pipeline"

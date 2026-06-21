@@ -63,26 +63,36 @@ async function main() {
   if (!apiKey) throw new Error("OPENAI_API_KEY required");
   if (!dbUrl) throw new Error("DATABASE_URL required");
 
-  const openai = new OpenAI({ apiKey });
   const db = new TopicMemoryDB(dbUrl);
   await db.init();
 
-  console.log(`Seeding ${INTERESTS.length} interests…`);
+  // Skip if already seeded — avoids OpenAI calls on every restart
+  const existing = await db.getAllInterests();
+  const existingSlugs = new Set(existing.map((i: { slug: string }) => i.slug));
+  const toSeed = INTERESTS.filter((i) => !existingSlugs.has(i.slug));
 
-  for (const interest of INTERESTS) {
+  if (toSeed.length === 0) {
+    console.log("[seed:interests] Already seeded, skipping.");
+    await db.close();
+    return;
+  }
+
+  const openai = new OpenAI({ apiKey });
+  console.log(`[seed:interests] Seeding ${toSeed.length} new interests…`);
+
+  for (const interest of toSeed) {
     const input = `${interest.name}: ${interest.description}`;
     const res = await openai.embeddings.create({
       model: "text-embedding-3-small",
       input,
     });
     const embedding = res.data[0].embedding;
-
     await db.upsertInterest({ ...interest, embedding });
     console.log(`  ✓ ${interest.slug}`);
   }
 
   await db.close();
-  console.log("Done.");
+  console.log("[seed:interests] Done.");
 }
 
 main().catch((err) => {

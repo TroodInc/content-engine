@@ -113,14 +113,31 @@ async function main() {
   const db = new TopicMemoryDB(dbUrl);
   await db.init();
 
-  // Resolve interest slugs → IDs
   const allInterests = await db.getAllInterests();
+
+  // Can't seed sources without interests — interests must be seeded first
+  if (allInterests.length === 0) {
+    console.warn("[seed:sources] No interests found — run seed:interests first.");
+    await db.close();
+    return;
+  }
+
   const slugToId = new Map(allInterests.map((i: { slug: string; id: string }) => [i.slug, i.id]));
+  const existingSources = await db.getAllSources();
+  const existingUrls = new Set(existingSources.map((s: { url: string }) => s.url));
 
   const sources = getSources();
-  console.log(`Seeding ${sources.length} sources…`);
+  const toSeed = sources.filter((s) => !existingUrls.has(s.url));
 
-  for (const src of sources) {
+  if (toSeed.length === 0) {
+    console.log("[seed:sources] Already seeded, skipping.");
+    await db.close();
+    return;
+  }
+
+  console.log(`[seed:sources] Seeding ${toSeed.length} new sources…`);
+
+  for (const src of toSeed) {
     const interestIds = src.interestSlugs
       .map((s) => slugToId.get(s))
       .filter((id): id is string => {
@@ -139,7 +156,7 @@ async function main() {
   }
 
   await db.close();
-  console.log("Done.");
+  console.log("[seed:sources] Done.");
 }
 
 main().catch((err) => {
