@@ -2,7 +2,24 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import cron from "node-cron";
-import { normalizeTelegramChannelReference } from "@contentengine/telegram-channel-reader";
+// normalizeTelegramChannelReference inlined from telegram-channel-reader (not exported in standalone pkg)
+function normalizeTelegramChannelReference(channel: string): string {
+  const trimmed = channel.trim();
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    try {
+      const parsed = new URL(trimmed);
+      if (parsed.hostname !== "t.me" && parsed.hostname !== "telegram.me") return trimmed;
+      const segments = parsed.pathname.split("/").filter(Boolean);
+      if (segments.length === 0) return trimmed;
+      if (segments[0] === "c" && segments.length >= 2) {
+        const id = segments[1];
+        return /^\d+$/.test(id) ? `-100${id}` : id;
+      }
+      return segments[0];
+    } catch { return trimmed; }
+  }
+  return trimmed.startsWith("@") ? trimmed.slice(1) : trimmed;
+}
 import { TopicMemoryDB } from "@contentengine/topic-memory-db";
 import { loadConfig } from "./config.js";
 import {
