@@ -16,6 +16,9 @@
     "write": "node dist/index.js write",
     "publish": "node dist/index.js publish",
     "server": "node dist/server.js",
+    "seed:interests": "node dist/scripts/seed-interests.js",
+    "seed:sources": "node dist/scripts/seed-sources.js",
+    "pipeline": "node dist/scripts/run-pipeline.js",
     "clean": "rm -rf dist"
   },
   "dependencies": {
