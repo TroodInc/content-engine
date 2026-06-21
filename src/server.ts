@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import cron from "node-cron";
 import { normalizeTelegramChannelReference } from "@contentengine/telegram-channel-reader";
 import { TopicMemoryDB } from "@contentengine/topic-memory-db";
 import { loadConfig } from "./config.js";
@@ -269,6 +270,22 @@ async function start() {
 
   app.listen(PORT, () => {
     console.log(`Content Engine API listening on http://localhost:${PORT}`);
+  });
+
+  // Daily pipeline: ingest all sources then match interests (midnight UTC)
+  cron.schedule("0 0 * * *", async () => {
+    console.log(`[cron] ${new Date().toISOString()} — starting daily pipeline`);
+    try {
+      const ingestResult = await ingestClaw.ingestAll();
+      console.log(`[cron] ingest: ${ingestResult.articlesInserted} new, ${ingestResult.duplicates} dupes`);
+      if (ingestResult.errors.length) ingestResult.errors.forEach(e => console.warn("[cron]", e));
+
+      const matchResult = await matcherClaw.matchAll();
+      console.log(`[cron] match: ${matchResult.articlesScored} scored, ${matchResult.linksCreated} links`);
+      if (matchResult.errors.length) matchResult.errors.forEach(e => console.warn("[cron]", e));
+    } catch (err) {
+      console.error("[cron] pipeline failed:", err);
+    }
   });
 
   // Graceful shutdown
