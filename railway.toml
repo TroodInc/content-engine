@@ -1,0 +1,10 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "node dist/server.js"
+
+[[crons]]
+name    = "pipeline"
+schedule = "0 */24 * * *"
+command  = "node dist/scripts/run-pipeline.js"
