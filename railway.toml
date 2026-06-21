@@ -1,6 +1,19 @@
 [build]
 builder   = "nixpacks"
-buildCommand = "npm install && npm run build"
+buildCommand = """
+  mkdir -p _deps &&
+  git clone --depth 1 https://github.com/TroodInc/telegram-channel-reader _deps/telegram-channel-reader &&
+  cd _deps/telegram-channel-reader && npm install && npm run build && cd ../.. &&
+  git clone --depth 1 https://github.com/TroodInc/article-extractor _deps/article-extractor &&
+  cd _deps/article-extractor && npm install && npm run build && cd ../.. &&
+  git clone --depth 1 https://github.com/TroodInc/embedding-utils _deps/semantic-skills &&
+  cd _deps/semantic-skills && npm install && npm run build && cd ../.. &&
+  git clone --depth 1 https://github.com/TroodInc/topic-memory-db _deps/topic-memory-db &&
+  cd _deps/topic-memory-db && npm install && npm run build && cd ../.. &&
+  git clone --depth 1 https://github.com/TroodInc/discourse-api-client _deps/discourse-api-client &&
+  cd _deps/discourse-api-client && npm install && npm run build && cd ../.. &&
+  npm install && npm run build
+"""
 
 [deploy]
 startCommand = "node dist/scripts/seed-interests.js && node dist/scripts/seed-sources.js && node dist/server.js"

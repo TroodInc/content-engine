@@ -140,3 +140,4 @@ vite.config.ts.timestamp-*
 
 # SQLite database
 data/
+_deps/

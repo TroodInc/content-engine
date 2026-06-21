@@ -22,11 +22,11 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@contentengine/telegram-channel-reader": "file:../telegram-channel-reader",
-    "@contentengine/article-extractor": "file:../article-extractor",
-    "@contentengine/semantic-skills": "file:../semantic-skills",
-    "@contentengine/topic-memory-db": "file:../topic-memory-db",
-    "@contentengine/discourse-api-client": "file:../discourse-api-client",
+    "@contentengine/telegram-channel-reader": "file:./_deps/telegram-channel-reader",
+    "@contentengine/article-extractor": "file:./_deps/article-extractor",
+    "@contentengine/semantic-skills": "file:./_deps/semantic-skills",
+    "@contentengine/topic-memory-db": "file:./_deps/topic-memory-db",
+    "@contentengine/discourse-api-client": "file:./_deps/discourse-api-client",
     "cors": "^2.8.5",
     "express": "^4.19.2",
     "openai": "^4.28.0",
