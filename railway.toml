@@ -18,7 +18,6 @@ buildCommand = """
 [deploy]
 startCommand = "node dist/scripts/seed-interests.js && node dist/scripts/seed-sources.js && node dist/server.js"
 
-[[crons]]
-name    = "pipeline"
-schedule = "0 */24 * * *"
-command  = "node dist/scripts/run-pipeline.js"
+# Cron is configured in the Railway dashboard:
+# Schedule: 0 0 * * *  (daily at midnight UTC)
+# Command:  node dist/scripts/run-pipeline.js
