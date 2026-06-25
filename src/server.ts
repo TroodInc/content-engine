@@ -33,6 +33,17 @@ import {
 import { createRuntime } from "./runtime.js";
 
 const PORT = Number(process.env.API_PORT) || 3001;
+const ADMIN_API_KEY = process.env.ADMIN_API_KEY ?? '';
+
+function requireAdminKey(req: import("express").Request, res: import("express").Response, next: import("express").NextFunction) {
+  if (!ADMIN_API_KEY) { next(); return; } // disabled if not configured
+  const provided = req.headers['x-api-key'] ?? req.query['api_key'];
+  if (provided !== ADMIN_API_KEY) {
+    res.status(401).json({ error: true, message: 'Unauthorized' });
+    return;
+  }
+  next();
+}
 
 async function start() {
   const config = loadConfig();
@@ -112,7 +123,7 @@ async function start() {
 
   // --- Ingest & match endpoints ---
 
-  app.post("/api/ingest", async (_req, res) => {
+  app.post("/api/ingest", requireAdminKey, async (_req, res) => {
     try {
       const result = await ingestClaw.ingestAll();
       res.json(result);
@@ -121,7 +132,7 @@ async function start() {
     }
   });
 
-  app.post("/api/match", async (_req, res) => {
+  app.post("/api/match", requireAdminKey, async (_req, res) => {
     try {
       const result = await matcherClaw.matchAll();
       res.json(result);
@@ -214,7 +225,7 @@ async function start() {
     }
   });
 
-  app.post("/api/sources", async (req, res) => {
+  app.post("/api/sources", requireAdminKey, async (req, res) => {
     try {
       const { name, url, adapter_type, adapter_config, interest_ids } = req.body as Record<string, unknown>;
       if (typeof name !== "string" || typeof url !== "string" || typeof adapter_type !== "string") {
